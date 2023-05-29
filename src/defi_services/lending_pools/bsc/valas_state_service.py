@@ -1,14 +1,14 @@
-from src.defi_services.abis.erc20_abi import ERC20_ABI
-from src.defi_services.abis.lending_pool.chef_incentives_controller import CHEF_INCENTIVES_CONTROLLER
-from src.defi_services.abis.lending_pool.lending_pool_abi import LENDING_POOL_ABI
-from src.defi_services.abis.lending_pool.oracle_abi import ORACLE_ABI
-from src.defi_services.abis.lending_pool.valas_multi_fee_distribution import VALAS_MULTI_FEE_DISTRIBUTION
-from src.defi_services.constants.db_constant import DBConst
-from src.defi_services.constants.time_constant import TimeConstants
-from src.defi_services.lending_pools.bsc.trava_state_service import TravaStateService
+from defi_services.abis.erc20_abi import ERC20_ABI
+from defi_services.abis.lending_pool.chef_incentives_controller import CHEF_INCENTIVES_CONTROLLER
+from defi_services.abis.lending_pool.lending_pool_abi import LENDING_POOL_ABI
+from defi_services.abis.lending_pool.oracle_abi import ORACLE_ABI
+from defi_services.abis.lending_pool.valas_multi_fee_distribution import VALAS_MULTI_FEE_DISTRIBUTION
+from defi_services.constants.db_constant import DBConst
+from defi_services.constants.time_constant import TimeConstants
+from defi_services.lending_pools.bsc.trava_state_service import TravaStateService
 import logging
 
-from src.defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
+from defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
 
 _LOGGER = logging.getLogger("AaveLendingPoolS")
 

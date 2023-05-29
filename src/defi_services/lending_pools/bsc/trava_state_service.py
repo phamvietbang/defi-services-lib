@@ -1,13 +1,13 @@
 import logging
 
-from src.defi_services.abis.erc20_abi import ERC20_ABI
-from src.defi_services.abis.lending_pool.oracle_abi import ORACLE_ABI
-from src.defi_services.abis.lending_pool.staked_incentives_abi import STAKED_INCENTIVES_ABI
-from src.defi_services.abis.lending_pool.trava_lending_pool_abi import TRAVA_LENDING_POOL_ABI
-from src.defi_services.constants.db_constant import DBConst
-from src.defi_services.constants.time_constant import TimeConstants
-from src.defi_services.state_service import StateService
-from src.defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
+from defi_services.abis.erc20_abi import ERC20_ABI
+from defi_services.abis.lending_pool.oracle_abi import ORACLE_ABI
+from defi_services.abis.lending_pool.staked_incentives_abi import STAKED_INCENTIVES_ABI
+from defi_services.abis.lending_pool.trava_lending_pool_abi import TRAVA_LENDING_POOL_ABI
+from defi_services.constants.db_constant import DBConst
+from defi_services.constants.time_constant import TimeConstants
+from defi_services.state_service import StateService
+from defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
 
 logger = logging.getLogger("Trava Lending Pool State Service")
 

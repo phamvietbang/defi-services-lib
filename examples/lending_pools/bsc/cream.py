@@ -1,7 +1,7 @@
 import json
 
-from src.defi_services.lending_pools.bsc.cream_state_service import CreamStateService
-from examples.lending_pools.bsc.lending_pools_info.cream import CREAM
+from defi_services.lending_pools.bsc.cream_state_service import CreamStateService
+from defi_services.lending_pools.bsc.lending_pools_info.cream import CREAM
 
 if __name__ == "__main__":
     cream = CreamStateService("https://bsc-dataseed1.binance.org/")

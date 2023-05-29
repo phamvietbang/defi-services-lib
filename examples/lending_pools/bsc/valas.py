@@ -1,7 +1,7 @@
 import json
 
-from examples.lending_pools.bsc.lending_pools_info.valas import VAlAS
-from src.defi_services.lending_pools.bsc.valas_state_service import ValasStateService
+from defi_services.lending_pools.bsc.lending_pools_info.valas import VAlAS
+from defi_services.lending_pools.bsc.valas_state_service import ValasStateService
 
 if __name__ == "__main__":
     trava = ValasStateService("https://rpc.ankr.com/bsc")

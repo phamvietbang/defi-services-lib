@@ -2,7 +2,7 @@ import re
 
 import setuptools
 
-with open("src/cli_scheduler/__init__.py", "rt", encoding="utf8") as f:
+with open("src/defi_services/__init__.py", "rt", encoding="utf8") as f:
     version = re.search(r"__version__ = \"(.*?)\"", f.read()).group(1)
 
 with open('README.md', 'r', encoding='utf-8') as f:
@@ -29,7 +29,6 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         "web3==5.31.1",
-        "QueryStateLib==1.1.4",
-        "pycoingecko==2.2.0"
+        "QueryStateLib==1.1.4"
     ],
 )

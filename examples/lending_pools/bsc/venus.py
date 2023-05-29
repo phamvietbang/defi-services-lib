@@ -1,8 +1,8 @@
 import json
 
-from src.defi_services.abis.lending_pool.venus_lens_abi_v1 import VENUS_LENS_ABI_V1
-from src.defi_services.lending_pools.bsc.venus_state_service import VenusStateService
-from examples.lending_pools.bsc.lending_pools_info.venus import VENUS
+from defi_services.abis.lending_pool.venus_lens_abi_v1 import VENUS_LENS_ABI_V1
+from defi_services.lending_pools.bsc.venus_state_service import VenusStateService
+from defi_services.lending_pools.bsc.lending_pools_info.venus import VENUS
 
 if __name__ == "__main__":
     venus = VenusStateService("https://bsc-dataseed1.binance.org/")

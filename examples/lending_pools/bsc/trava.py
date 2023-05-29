@@ -1,7 +1,7 @@
 import json
 
-from examples.lending_pools.bsc.lending_pools_info.trava import TRAVA
-from src.defi_services.lending_pools.bsc.trava_state_service import TravaStateService
+from defi_services.lending_pools.bsc.lending_pools_info.trava import TRAVA
+from defi_services.lending_pools.bsc.trava_state_service import TravaStateService
 
 if __name__ == "__main__":
     trava = TravaStateService("https://rpc.ankr.com/bsc")
