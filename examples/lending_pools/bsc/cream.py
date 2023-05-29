@@ -13,7 +13,7 @@ if __name__ == "__main__":
     )
     claim = cream.get_wallet_information_in_lending_pool(
         comptroller_implementation_address=CREAM.get("comptrollerImplementationAddress"),
-        lens_address=CREAM.get("lens_address"),
+        lens_address=CREAM.get("lensAddress"),
         pool_token_price=4.9,
         reserves_info=CREAM.get("reservesList"),
         pool_token=CREAM.get("rewardToken"),
