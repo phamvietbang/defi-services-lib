@@ -1,4 +1,4 @@
-VENUS = {
+VENUS_BSC = {
   "chainId": "0x38",
   "projectName": "Venus",
   "name": "Venus Lending Pool",

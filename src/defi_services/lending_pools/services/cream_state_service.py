@@ -57,8 +57,7 @@ class CreamStateService(StateService):
             comptroller_address: str,
             comptroller_abi: list,
             token_addresses: list,
-            block_number: int = "latest",
-            call_underlying_price: bool = False
+            block_number: int = "latest"
     ):
         list_call_id, list_rpc_call = [], []
         for token_address in token_addresses:
@@ -79,10 +78,9 @@ class CreamStateService(StateService):
             )
             add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=token_address, block_number=block_number,
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="cTokenMetadata")
-            if call_underlying_price:
-                add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=token_address,
-                             block_number=block_number,
-                             list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="cTokenUnderlyingPrice")
+            add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=token_address,
+                         block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="cTokenUnderlyingPrice")
         return list_rpc_call, list_call_id
 
     def _decode_apy_lending_pool_function_call(
@@ -93,7 +91,6 @@ class CreamStateService(StateService):
             comptroller_address: str,
             token_addresses: list,
             block_number: int = "latest",
-            call_underlying_price: bool = False,
             wrapped_native_token_price: float = 310,
     ):
         data_response = self.client_querier.sent_batch_to_provider(list_rpc_call, batch_size=100)
@@ -110,12 +107,11 @@ class CreamStateService(StateService):
             mint_paused_tokens[lower_address] = decoded_data.get(mint_guardian_paused_call_id)
             metadata_id = f"cTokenMetadata_{lens_address}_{token_address}_{block_number}".lower()
             reserve_tokens_info.append(decoded_data.get(metadata_id))
-            if call_underlying_price:
-                underlying_id = f"cTokenUnderlyingPrice_{lens_address}_{token_address}_{block_number}".lower()
-                price_token = decoded_data.get(underlying_id)
-                underlying_prices[lower_address] = price_token[1] * wrapped_native_token_price
-                if lower_address in AbnormalCreamPool.decimals.keys():
-                    underlying_prices[lower_address] /= 10 ** AbnormalCreamPool.decimals.get(lower_address)
+            underlying_id = f"cTokenUnderlyingPrice_{lens_address}_{token_address}_{block_number}".lower()
+            price_token = decoded_data.get(underlying_id)
+            underlying_prices[lower_address] = price_token[1] * wrapped_native_token_price
+            if lower_address in AbnormalCreamPool.decimals.keys():
+                underlying_prices[lower_address] /= 10 ** AbnormalCreamPool.decimals.get(lower_address)
         return {
             "reserve_tokens_info": reserve_tokens_info,
             "ctoken_speeds": ctoken_speeds,
@@ -128,44 +124,31 @@ class CreamStateService(StateService):
             self,
             lens_address: str,
             comptroller_address: str,
+            pool_token_price: float,
             lens_abi: list = CREAM_LENS_ABI,
             comptroller_abi: list = CREAM_COMPTROLLER_ABI,
-            reserves_info: dict = None,
             pool_decimals: int = 18,
             block_number: int = "latest",
-            pool_token_price: float = 1,
-            underlying_prices: dict = None,
             wrapped_native_token_price: float = 310
     ):
         tokens_interest_rates = dict()
-        if not reserves_info:
-            ctokens = self.get_all_markets(comptroller_address, comptroller_abi, block_number)
-        else:
-            ctokens = [value["cToken"] for key, value in reserves_info.items()]
+        ctokens = self.get_all_markets(comptroller_address, comptroller_abi, block_number)
         for token in ctokens:
             if token in [ContractAddresses.LUNA.lower(), ContractAddresses.UST.lower(), ContractAddresses.LUNA,
                          ContractAddresses.UST]:
                 ctokens.remove(token)
-
-        call_underlying_price = True
-        if underlying_prices:
-            call_underlying_price = False
         list_rpc_call, list_call_id = self._encode_apy_lending_pool_function_call(
-            lens_address, lens_abi, comptroller_address, comptroller_abi, ctokens, block_number, call_underlying_price)
+            lens_address, lens_abi, comptroller_address, comptroller_abi, ctokens, block_number)
         decode_data = self._decode_apy_lending_pool_function_call(
             list_rpc_call, list_call_id, lens_address, comptroller_address, ctokens, block_number,
-            call_underlying_price, wrapped_native_token_price)
+            wrapped_native_token_price)
         mint_paused_tokens = decode_data["mint_paused_tokens"]
         borrow_paused_tokens = decode_data["borrow_paused_tokens"]
         reserve_tokens_info = decode_data["reserve_tokens_info"]
         ctoken_speeds = decode_data["ctoken_speeds"]
         for data in reserve_tokens_info:
             address = data[0].lower()
-            if underlying_prices:
-                underlying_token_price = underlying_prices.get(data[11].lower())
-            else:
-                underlying_token_price = float(decode_data["underlying_prices"][address]) / 10 ** int(data[13])
-
+            underlying_token_price = float(decode_data["underlying_prices"][address]) / 10 ** int(data[13])
             token_info = {
                 "token": address,
                 "token_decimals": data[12],
@@ -289,39 +272,17 @@ class CreamStateService(StateService):
             DBConst.borrow_paused: token_info[DBConst.borrow_paused]
         }
 
-    def get_wallet_information_in_lending_pool(
+    def get_rewards_balance(
             self,
             wallet_address: str,
             lens_address: str,
             comptroller_implementation_address: str,
             pool_token: str,
-            reserves_info: dict,
             lens_abi: list = CREAM_LENS_ABI,
-            underlying_prices: dict = None,
-            pool_token_price: float = 1,
             block_number: int = "latest",
-            wrapped_native_token_price: float = 310,
     ):
         list_rpc_call = []
         list_call_id = []
-        for token in reserves_info:
-            underlying = token
-            value = reserves_info[token]
-            if token == ContractAddresses.BNB:
-                underlying = ContractAddresses.WBNB
-            if not underlying_prices:
-                add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=value["cToken"],
-                             block_number=block_number,
-                             list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="cTokenUnderlyingPrice")
-            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="borrowBalanceCurrent",
-                         block_number=block_number,
-                         fn_paras=wallet_address, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
-            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="balanceOfUnderlying",
-                         block_number=block_number,
-                         fn_paras=wallet_address, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
-            add_rpc_call(abi=ERC20_ABI, contract_address=underlying, fn_name="decimals", block_number=block_number,
-                         list_call_id=list_call_id, list_rpc_call=list_rpc_call)
-
         fn_paras = [self.to_checksum(pool_token),
                     self.to_checksum(comptroller_implementation_address),
                     self.to_checksum(wallet_address)]
@@ -334,9 +295,39 @@ class CreamStateService(StateService):
         data_response = self.client_querier.sent_batch_to_provider(list_rpc_call, batch_size=100)
         decoded_data = decode_data_response(data_response, list_call_id)
         reward = decoded_data[get_reward_id][-1] / 10 ** 18
+        return reward
+
+    def get_wallet_deposit_borrow_balance(
+            self,
+            wallet_address: str,
+            lens_address: str,
+            reserves_info: dict,
+            lens_abi: list = CREAM_LENS_ABI,
+            block_number: int = "latest",
+            wrapped_native_token_price: float = 310,
+    ):
+        list_rpc_call = []
+        list_call_id = []
+        for token in reserves_info:
+            underlying = token
+            value = reserves_info[token]
+            if token == ContractAddresses.BNB:
+                underlying = ContractAddresses.WBNB
+            add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=value["cToken"],
+                         block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="cTokenUnderlyingPrice")
+            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="borrowBalanceCurrent",
+                         block_number=block_number,
+                         fn_paras=wallet_address, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="balanceOfUnderlying",
+                         block_number=block_number,
+                         fn_paras=wallet_address, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=ERC20_ABI, contract_address=underlying, fn_name="decimals", block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+
+        data_response = self.client_querier.sent_batch_to_provider(list_rpc_call, batch_size=100)
+        decoded_data = decode_data_response(data_response, list_call_id)
         total_borrow, result = 0, {
-            "reward_amount": reward,
-            "reward_amount_in_usd": reward * pool_token_price,
             "borrow_amount_in_usd": 0,
             "deposit_amount_in_usd": 0,
             "health_factor": 0,
@@ -353,12 +344,8 @@ class CreamStateService(StateService):
             decimals = decoded_data[get_decimals_id]
             deposit_amount = decoded_data[get_total_deposit_id] / 10 ** decimals
             borrow_amount = decoded_data[get_total_borrow_id] / 10 ** decimals
-            if not underlying_prices:
-                get_underlying_token_price = f"cTokenUnderlyingPrice_{lens_address}_{value['cToken']}_{block_number}".lower()
-                token_price = decoded_data.get(get_underlying_token_price)[
-                                  1] * wrapped_native_token_price / 10 ** decimals
-            else:
-                token_price = underlying_prices.get(underlying)
+            get_underlying_token_price = f"cTokenUnderlyingPrice_{lens_address}_{value['cToken']}_{block_number}".lower()
+            token_price = decoded_data.get(get_underlying_token_price)[1] * wrapped_native_token_price / 10 ** decimals
             deposit_amount_in_usd = deposit_amount * token_price
             borrow_amount_in_usd = borrow_amount * token_price
             total_borrow += borrow_amount_in_usd

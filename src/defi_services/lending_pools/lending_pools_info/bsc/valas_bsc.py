@@ -1,4 +1,4 @@
-VAlAS = {
+VALAS_BSC = {
     "address": "0xe29a55a6aeff5c8b1beede5bcf2f0cb3af8f91f5",
     "name": "Valas Lending Pool",
     "rewardToken": "0xb1ebdd56729940089ecc3ad0bbeeb12b6842ea6f",

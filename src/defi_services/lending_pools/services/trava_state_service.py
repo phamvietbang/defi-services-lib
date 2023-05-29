@@ -90,7 +90,6 @@ class TravaStateService(StateService):
             pool_address: str,
             pool_abi: list,
             reserves_list: list,
-            reserves_info: dict = None,
             stake_incentive_address: str = None,
             stake_incentive_abi: list = None,
             oracle_address: str = None,
@@ -107,27 +106,6 @@ class TravaStateService(StateService):
                 abi=ERC20_ABI, fn_name='decimals', contract_address=self.to_checksum(token_address),
                 block_number=block_number, list_rpc_call=list_rpc_call, list_call_id=list_call_id
             )
-            if reserves_info:
-                ttoken = reserves_info[token_address]['tToken']
-                debt_token = reserves_info[token_address]['debtToken']
-                add_rpc_call(
-                    abi=ERC20_ABI, fn_name='totalSupply', contract_address=self.to_checksum(ttoken),
-                    block_number=block_number, list_rpc_call=list_rpc_call, list_call_id=list_call_id
-                )
-                add_rpc_call(
-                    abi=ERC20_ABI, fn_name='totalSupply', contract_address=self.to_checksum(debt_token),
-                    block_number=block_number, list_rpc_call=list_rpc_call, list_call_id=list_call_id
-                )
-                add_rpc_call(
-                    abi=stake_incentive_abi, fn_name='getAssetData', contract_address=stake_incentive_address,
-                    block_number=block_number, fn_paras=self.to_checksum(ttoken), list_rpc_call=list_rpc_call,
-                    list_call_id=list_call_id
-                )
-                add_rpc_call(
-                    abi=stake_incentive_abi, fn_name='getAssetData', contract_address=stake_incentive_address,
-                    block_number=block_number, fn_paras=self.to_checksum(debt_token), list_rpc_call=list_rpc_call,
-                    list_call_id=list_call_id
-                )
 
         return list_rpc_call, list_call_id
 
@@ -137,7 +115,6 @@ class TravaStateService(StateService):
             list_call_id: list,
             pool_address: str,
             reserves_list: list,
-            reserves_info: dict = None,
             stake_incentive_address: str = None,
             oracle_address: str = None,
             block_number: int = "latest",
@@ -150,7 +127,6 @@ class TravaStateService(StateService):
             reserves_data[token.lower()] = decoded_data.get(get_reserve_data_call_id)
 
         interest_rate, ttokens, debt_tokens, decimals = {}, {}, {}, {}
-        total_supply_tokens, asset_data_tokens = {}, {}
         for token_address in reserves_list:
             lower_address = token_address.lower()
             reserve_data = reserves_data[lower_address]
@@ -162,19 +138,8 @@ class TravaStateService(StateService):
             debt_tokens[lower_address] = debt_token
             decimals_call_id = f'decimals_{token_address}_{block_number}'.lower()
             decimals[lower_address] = decoded_data.get(decimals_call_id)
-            if reserves_info:
-                ttoken_total_supply_call_id = f'totalSupply_{ttoken}_{block_number}'.lower()
-                debt_token_total_supply_call_id = f'totalSupply_{debt_token}_{block_number}'.lower()
-                ttoken_asset_data_call_id = f'getAssetData_{stake_incentive_address}_{ttoken}_{block_number}'.lower()
-                debt_asset_data_supply_call_id = f'getAssetData_{stake_incentive_address}_{debt_token}_{block_number}'.lower()
-                total_supply_tokens[ttoken] = decoded_data.get(ttoken_total_supply_call_id)
-                total_supply_tokens[debt_token] = decoded_data.get(debt_token_total_supply_call_id)
-                asset_data_tokens[ttoken] = decoded_data.get(ttoken_asset_data_call_id)
-                asset_data_tokens[debt_token] = decoded_data.get(debt_asset_data_supply_call_id)
 
         return {
-            "total_supply_tokens": total_supply_tokens,
-            "asset_data_tokens": asset_data_tokens,
             "decimals": decimals,
             "ttokens": ttokens,
             "debt_tokens": debt_tokens,
@@ -195,35 +160,25 @@ class TravaStateService(StateService):
             block_number: int = 'latest',
     ):
 
-        if not reserves_info:
-            reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
-        else:
-            reserves_list = list(reserves_info.keys())
-        if not token_prices:
-            token_prices = self.get_assets_price(oracle_address, oracle_abi, reserves_list, block_number)
-
+        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
+        token_prices = self.get_assets_price(oracle_address, oracle_abi, reserves_list, block_number)
         list_rpc_call, list_call_id = self._encode_apy_lending_pool_function_call(
-            pool_address, pool_abi, reserves_list, reserves_info, staked_incentive_address, staked_incentive_abi,
+            pool_address, pool_abi, reserves_list, staked_incentive_address, staked_incentive_abi,
             oracle_address, oracle_abi, block_number,
         )
         # Decode data
         decoded_data = self._decode_apy_lending_pool_function_call(
             list_rpc_call, list_call_id, pool_address,
-            reserves_list, reserves_info,
-            staked_incentive_address, oracle_address, block_number
+            reserves_list, staked_incentive_address, oracle_address, block_number
         )
         interest_rate = decoded_data["interest_rate"]
         ttokens = decoded_data["ttokens"]
         debt_tokens = decoded_data["debt_tokens"]
         decimals = decoded_data["decimals"]
-        total_supply_tokens = decoded_data["total_supply_tokens"]
-        asset_data_tokens = decoded_data["asset_data_tokens"]
         debt_and_t_tokens = list(debt_tokens.values()) + list(ttokens.values())
-        if not total_supply_tokens:
-            total_supply_tokens = self.total_supply_of_token_list(debt_and_t_tokens)
-        if not asset_data_tokens:
-            asset_data_tokens = self.get_asset_data_of_token_list(
-                staked_incentive_address, debt_and_t_tokens, staked_incentive_abi, block_number)
+        total_supply_tokens = self.total_supply_of_token_list(debt_and_t_tokens)
+        asset_data_tokens = self.get_asset_data_of_token_list(
+            staked_incentive_address, debt_and_t_tokens, staked_incentive_abi, block_number)
 
         lower_addresses = [i.lower() for i in reserves_list]
         for token_address in lower_addresses:
@@ -261,27 +216,48 @@ class TravaStateService(StateService):
 
         return interest_rate
 
-    def get_wallet_information_in_lending_pool(
+    def get_rewards_balance(
+            self,
+            wallet_address,
+            pool_address,
+            staked_incentive_address: str,
+            pool_abi: list = TRAVA_LENDING_POOL_ABI,
+            staked_incentive_abi: list = STAKED_INCENTIVES_ABI,
+            block_number: int = "latest"
+    ):
+        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
+        reserves_data = self.get_reserve_data_of_token_list(pool_address, reserves_list, pool_abi, block_number)
+        tokens = []
+        for key, value in reserves_data.items():
+            tokens += [self.to_checksum(value[6]), self.to_checksum(value[7])]
+        contract = self._w3.eth.contract(address=self.to_checksum(staked_incentive_address), abi=staked_incentive_abi)
+        reward = contract.functions.getRewardsBalance(tokens, self.to_checksum(wallet_address)).call(
+            block_identifier=block_number)
+        return reward / 10 ** 18
+
+    def get_wallet_deposit_borrow_balance(
             self,
             wallet_address: str,
-            staked_incentive_address: str,
+            pool_address: str,
             oracle_address: str,
-            staked_token_price: float,
-            reserves_info: dict,
+            pool_abi: list = TRAVA_LENDING_POOL_ABI,
             oracle_abi: list = ORACLE_ABI,
-            staked_incentive_abi: list = STAKED_INCENTIVES_ABI,
-            token_prices: dict = None,
-            block_number: int = 'latest',
+            block_number: int = "latest"
     ):
+        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
+        token_prices = self.get_assets_price(oracle_address, oracle_abi, reserves_list, block_number)
+        reserves_data = self.get_reserve_data_of_token_list(pool_address, reserves_list, pool_abi, block_number)
+        reserves_info = {}
+        for key, value in reserves_data.items():
+            reserves_info[key] = {}
+            reserves_info[key]["tToken"] = value[6]
+            reserves_info[key]["dToken"] = value[7]
+            risk_param = bin(value[0][0])[2:]
+            reserves_info[key]["liquidationThreshold"] = int(risk_param[-31:-16], 2) / 10 ** 4
         list_rpc_call = []
         list_call_id = []
-        td_token = []
-        token_addresses = list(reserves_info.keys())
-        if not token_prices:
-            token_prices = self.get_assets_price(oracle_address, oracle_abi, token_addresses, block_number)
         for token in reserves_info:
             value = reserves_info[token]
-            td_token += [self.to_checksum(value["tToken"]), self.to_checksum(value["dToken"])]
             add_rpc_call(abi=ERC20_ABI, contract_address=value["tToken"], fn_paras=wallet_address,
                          block_number=block_number,
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="balanceOf")
@@ -290,28 +266,15 @@ class TravaStateService(StateService):
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="balanceOf")
             add_rpc_call(abi=ERC20_ABI, contract_address=token, fn_name="decimals", block_number=block_number,
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call)
-        add_rpc_call(abi=staked_incentive_abi, contract_address=staked_incentive_address, fn_name="getRewardsBalance",
-                     block_number=block_number, fn_paras=[td_token, wallet_address],
-                     list_call_id=list_call_id, list_rpc_call=list_rpc_call)
 
         data_response = self.client_querier.sent_batch_to_provider(list_rpc_call)
         decoded_data = decode_data_response(data_response, list_call_id)
-        reward_id = f'getRewardsBalance_{staked_incentive_address}_{[td_token, wallet_address]}_{block_number}'.lower()
         total_borrow, result = 0, {
-            "reward_amount": decoded_data[reward_id] / 10 ** 18,
-            "reward_amount_in_usd": decoded_data[reward_id] * staked_token_price / 10 ** 18,
             "borrow_amount_in_usd": 0,
             "deposit_amount_in_usd": 0,
             "health_factor": 0,
             "reserves_data": {}
         }
-        get_assets_prices_id = f'getAssetsPrices_{oracle_address}_{token_addresses}_{block_number}'.lower()
-        reserves_prices = decoded_data.get(get_assets_prices_id)
-        if reserves_prices:
-            token_prices = {}
-            for pos in range(len(token_addresses)):
-                token_prices[token_addresses[pos]] = reserves_prices[pos]
-
         for token in reserves_info:
             value = reserves_info[token]
             get_total_deposit_id = f"balanceOf_{value['tToken']}_{wallet_address}_{block_number}".lower()

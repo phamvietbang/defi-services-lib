@@ -1,4 +1,4 @@
-CREAM = {
+CREAM_BSC = {
   "_id": "0x38_0x589de0f0ccf905477646599bb3e5c622c84cc0ba",
   "chainId": "0x38",
   "createdAt": 1577836800,

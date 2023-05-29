@@ -1,23 +1,16 @@
 import json
 
-from defi_services.lending_pools.bsc.lending_pools_info.trava import TRAVA
-from defi_services.lending_pools.bsc.trava_state_service import TravaStateService
+from defi_services.lending_pools.trava_service import TravaService
 
 if __name__ == "__main__":
-    trava = TravaStateService("https://rpc.ankr.com/bsc")
-    apy = trava.get_apy_lending_pool(
-        pool_address=TRAVA.get("address"),
-        staked_incentive_address=TRAVA.get("stakedIncentiveAddress"),
-        oracle_address=TRAVA.get("oracleAddress"),
-    )
-    claim = trava.get_wallet_information_in_lending_pool(
+    trava = TravaService("0x38","https://rpc.ankr.com/bsc")
+    apy = trava.get_apy_defi_app()
+    deposit_borrow = trava.get_wallet_deposit_borrow_balance(
         wallet_address="0x13c0c2F7Eb2799a515aae280832443365E54B511",
-        staked_incentive_address=TRAVA.get("stakedIncentiveAddress"),
-        reserves_info=TRAVA.get("reservesList"),
-        oracle_address=TRAVA.get("oracleAddress"),
-        staked_token_price=0.00041267
     )
+    claim = trava.get_rewards_balance(wallet_address="0x13c0c2F7Eb2799a515aae280832443365E54B511")
+    print(claim)
     with open("trava_apy.json", 'w') as f:
         f.write(json.dumps(apy, indent=1))
     with open("trava_add.json", 'w') as f:
-        f.write(json.dumps(claim, indent=1))
+        f.write(json.dumps(deposit_borrow, indent=1))
