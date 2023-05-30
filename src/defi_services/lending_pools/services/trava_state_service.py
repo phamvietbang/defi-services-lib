@@ -85,6 +85,18 @@ class TravaStateService(StateService):
 
         return result
 
+    def get_reserves_info(self, pool_address: str, pool_abi: list, block_number: int = "latest"):
+        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
+        reserves_data = self.get_reserve_data_of_token_list(pool_address, reserves_list, pool_abi, block_number)
+        reserves_info = {}
+        for key, value in reserves_data.items():
+            reserves_info[key] = {}
+            reserves_info[key]["tToken"] = value[6]
+            reserves_info[key]["dToken"] = value[7]
+            risk_param = bin(value[0][0])[2:]
+            reserves_info[key]["liquidationThreshold"] = int(risk_param[-31:-16], 2) / 10 ** 4
+        return reserves_info
+
     def _encode_apy_lending_pool_function_call(
             self,
             pool_address: str,
@@ -159,8 +171,10 @@ class TravaStateService(StateService):
             pool_token_price: float = 1,
             block_number: int = 'latest',
     ):
+        if not reserves_info:
+            reserves_info = self.get_reserves_info(pool_address, pool_abi, block_number)
 
-        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
+        reserves_list = list(reserves_info.keys())
         token_prices = self.get_assets_price(oracle_address, oracle_abi, reserves_list, block_number)
         list_rpc_call, list_call_id = self._encode_apy_lending_pool_function_call(
             pool_address, pool_abi, reserves_list, staked_incentive_address, staked_incentive_abi,
@@ -195,10 +209,16 @@ class TravaStateService(StateService):
             eps_t = asset_data_t[1] / 10 ** 18
             eps_d = asset_data_d[1] / 10 ** 18
             token_price = token_prices.get(token_address)
-            deposit_apr = eps_t * TimeConstants.A_YEAR * pool_token_price / (
-                    total_supply_t * token_price)
-            borrow_apr = eps_d * TimeConstants.A_YEAR * pool_token_price / (
-                    total_supply_d * token_price)
+            if total_supply_t:
+                deposit_apr = eps_t * TimeConstants.A_YEAR * pool_token_price / (
+                        total_supply_t * token_price)
+            else:
+                deposit_apr = 0
+            if total_supply_d:
+                borrow_apr = eps_d * TimeConstants.A_YEAR * pool_token_price / (
+                        total_supply_d * token_price)
+            else:
+                borrow_apr = 0
             interest_rate[token_address].update({
                 "utilization": total_supply_d / total_supply_t,
                 DBConst.reward_deposit_apy: deposit_apr,
@@ -221,15 +241,17 @@ class TravaStateService(StateService):
             wallet_address,
             pool_address,
             staked_incentive_address: str,
+            reserves_info: dict = None,
             pool_abi: list = TRAVA_LENDING_POOL_ABI,
             staked_incentive_abi: list = STAKED_INCENTIVES_ABI,
             block_number: int = "latest"
     ):
-        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
-        reserves_data = self.get_reserve_data_of_token_list(pool_address, reserves_list, pool_abi, block_number)
+        if not reserves_info:
+            reserves_info = self.get_reserves_info(pool_address, pool_abi, block_number)
+
         tokens = []
-        for key, value in reserves_data.items():
-            tokens += [self.to_checksum(value[6]), self.to_checksum(value[7])]
+        for key, value in reserves_info.items():
+            tokens += [self.to_checksum(value["tToken"]), self.to_checksum(value["dToken"])]
         contract = self._w3.eth.contract(address=self.to_checksum(staked_incentive_address), abi=staked_incentive_abi)
         reward = contract.functions.getRewardsBalance(tokens, self.to_checksum(wallet_address)).call(
             block_identifier=block_number)
@@ -240,20 +262,16 @@ class TravaStateService(StateService):
             wallet_address: str,
             pool_address: str,
             oracle_address: str,
+            reserves_info: dict = None,
             pool_abi: list = TRAVA_LENDING_POOL_ABI,
             oracle_abi: list = ORACLE_ABI,
             block_number: int = "latest"
     ):
-        reserves_list = self.get_reserves_list(pool_address, pool_abi, block_number)
+        if not reserves_info:
+            reserves_info = self.get_reserves_info(pool_address, pool_abi)
+
+        reserves_list = list(reserves_info.keys())
         token_prices = self.get_assets_price(oracle_address, oracle_abi, reserves_list, block_number)
-        reserves_data = self.get_reserve_data_of_token_list(pool_address, reserves_list, pool_abi, block_number)
-        reserves_info = {}
-        for key, value in reserves_data.items():
-            reserves_info[key] = {}
-            reserves_info[key]["tToken"] = value[6]
-            reserves_info[key]["dToken"] = value[7]
-            risk_param = bin(value[0][0])[2:]
-            reserves_info[key]["liquidationThreshold"] = int(risk_param[-31:-16], 2) / 10 ** 4
         list_rpc_call = []
         list_call_id = []
         for token in reserves_info:
@@ -267,7 +285,7 @@ class TravaStateService(StateService):
             add_rpc_call(abi=ERC20_ABI, contract_address=token, fn_name="decimals", block_number=block_number,
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call)
 
-        data_response = self.client_querier.sent_batch_to_provider(list_rpc_call)
+        data_response = self.client_querier.sent_batch_to_provider(list_rpc_call, batch_size=100)
         decoded_data = decode_data_response(data_response, list_call_id)
         total_borrow, result = 0, {
             "borrow_amount_in_usd": 0,
@@ -302,3 +320,26 @@ class TravaStateService(StateService):
         else:
             result['health_factor'] = 100
         return result
+
+
+if __name__ == "__main__":
+    import json
+    from defi_services.lending_pools.lending_pools_info.ethereum.trava_eth import TRAVA_ETH
+    from defi_services.lending_pools.lending_pools_info.bsc.trava_bsc import TRAVA_BSC
+    from defi_services.lending_pools.lending_pools_info.fantom.trava_ftm import TRAVA_FTM
+    from defi_services.abis.lending_pool.trava_lending_pool_abi import TRAVA_LENDING_POOL_ABI
+
+    service = TravaStateService(provider_uri="https://rpc.ankr.com/eth")
+    reserve_info = service.get_reserves_info(TRAVA_ETH.get("address"), TRAVA_LENDING_POOL_ABI)
+    with open("trava_eth.json", "w") as f:
+        f.write(json.dumps(reserve_info, indent=1))
+
+    service = TravaStateService(provider_uri="https://rpc.ankr.com/fantom")
+    reserve_info = service.get_reserves_info(TRAVA_FTM.get("address"), TRAVA_LENDING_POOL_ABI)
+    with open("trava_ftm.json", "w") as f:
+        f.write(json.dumps(reserve_info, indent=1))
+
+    service = TravaStateService(provider_uri="https://rpc.ankr.com/bsc")
+    reserve_info = service.get_reserves_info(TRAVA_BSC.get("address"), TRAVA_LENDING_POOL_ABI)
+    with open("trava_bsc.json", "w") as f:
+        f.write(json.dumps(reserve_info, indent=1))

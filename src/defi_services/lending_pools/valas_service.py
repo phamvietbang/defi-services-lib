@@ -5,6 +5,8 @@ from defi_services.lending_pools.services.valas_state_service import ValasStateS
 
 
 class ValasService(DefiService):
+    name = "valas lending pool"
+
     def __init__(self, chain_id: str, provider_uri: str):
         super().__init__(chain_id, provider_uri)
         self.state_service = ValasStateService(provider_uri)
@@ -28,7 +30,8 @@ class ValasService(DefiService):
             wallet_address=wallet_address,
             pool_address=self.defi_constant.get("address"),
             multi_fee_address=self.defi_constant.get("multiFeeAddress"),
-            block_number=block_number
+            block_number=block_number,
+            reserves_info=self.defi_constant.get("reservesList")
         )
 
     def get_wallet_deposit_borrow_balance(self, wallet_address: str, block_number: int = "latest"):
@@ -36,5 +39,6 @@ class ValasService(DefiService):
             wallet_address=wallet_address,
             pool_address=self.defi_constant.get("address"),
             oracle_address=self.defi_constant.get("oracleAddress"),
-            block_number=block_number
+            block_number=block_number,
+            reserves_info=self.defi_constant.get("reservesList")
         )

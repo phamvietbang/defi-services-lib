@@ -2,7 +2,7 @@ from defi_services.abis.erc20_abi import ERC20_ABI
 from defi_services.abis.lending_pool.ctoken_abi import CTOKEN_ABI
 from defi_services.abis.lending_pool.venus_comptroller_abi import VENUS_COMPTROLLER_ABI
 from defi_services.abis.lending_pool.venus_lens_abi import VENUS_LENS_ABI
-from defi_services.constants.contract_address import ContractAddresses, AbnormalVenusPool
+from defi_services.constants.contract_address import ContractAddresses, AbnormalVenusPool, WrappedNativeTokens
 from defi_services.lending_pools.services.cream_state_service import CreamStateService
 from defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
 
@@ -32,6 +32,27 @@ class VenusStateService(CreamStateService):
         for price_token in reserve_tokens_info:
             reserve_tokens_info[price_token[0].lower()] = price_token[1] * bnb_price
         return reserve_tokens_info
+
+    def get_reserves_info(
+            self,
+            comptroller_address: str,
+            comptroller_abi: list,
+            lens_address: str,
+            lens_abi: list,
+            block_number: int = 'latest'):
+        ctokens = self.get_all_markets(comptroller_address, comptroller_abi, block_number)
+        metadata = self.vtoken_metadata_all(lens_address, lens_abi, ctokens, block_number)
+        reserves_info = {}
+        for data in metadata:
+            underlying = data[11].lower()
+            ctoken = data[0].lower()
+            lt = data[10] / 10 ** 18
+            reserves_info[underlying] = {
+                "cToken": ctoken,
+                "liquidationThreshold": lt
+            }
+
+        return reserves_info
 
     def get_token_speed(
             self, token_addresses: list, comptroller: str,
@@ -97,9 +118,14 @@ class VenusStateService(CreamStateService):
             reserve_tokens_info.append(decoded_data.get(metadata_id))
             underlying_id = f"vTokenUnderlyingPrice_{lens_address}_{token_address}_{block_number}".lower()
             price_token = decoded_data.get(underlying_id)
+            underlying_decimals = decoded_data.get(metadata_id)[-1]
             underlying_prices[lower_address] = price_token[1]
             if lower_address in AbnormalVenusPool.decimals.keys():
                 underlying_prices[lower_address] /= 10 ** AbnormalVenusPool.decimals.get(lower_address)
+            elif underlying_decimals == 8:
+                underlying_prices[lower_address] /= 10 ** 20
+            elif underlying_decimals == 6:
+                underlying_prices[lower_address] /= 10 ** 24
             ctoken_speeds[token_address.lower()] = decoded_data.get(speeds_call_id)
             borrow_paused_tokens[token_address.lower()] = False
             mint_paused_tokens[token_address.lower()] = False
@@ -191,14 +217,15 @@ class VenusStateService(CreamStateService):
             lens_abi: list = VENUS_LENS_ABI,
             block_number: int = "latest",
             wrapped_native_token_price: float = 310,
+            wrapped_native_token: str = None
     ):
         list_rpc_call = []
         list_call_id = []
         for token in reserves_info:
             underlying = token
             value = reserves_info[token]
-            if token == ContractAddresses.BNB:
-                underlying = ContractAddresses.WBNB
+            if token == WrappedNativeTokens.NATIVE_TOKEN:
+                underlying = wrapped_native_token
             add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=value["cToken"],
                          block_number=block_number,
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="vTokenUnderlyingPrice")
@@ -222,8 +249,8 @@ class VenusStateService(CreamStateService):
         for token in reserves_info:
             underlying = token
             value = reserves_info[token]
-            if token == ContractAddresses.BNB:
-                underlying = ContractAddresses.WBNB
+            if token == WrappedNativeTokens.NATIVE_TOKEN:
+                underlying = wrapped_native_token
             get_total_deposit_id = f"balanceOfUnderlying_{value['cToken']}_{wallet_address}_{block_number}".lower()
             get_total_borrow_id = f"borrowBalanceCurrent_{value['cToken']}_{wallet_address}_{block_number}".lower()
             get_decimals_id = f"decimals_{underlying}_{block_number}".lower()
@@ -253,3 +280,18 @@ class VenusStateService(CreamStateService):
         else:
             result['health_factor'] = 100
         return result
+
+
+if __name__ == "__main__":
+    import json
+    from defi_services.lending_pools.lending_pools_info.bsc.venus_bsc import VENUS_BSC
+
+    service = VenusStateService(provider_uri="https://rpc.ankr.com/bsc")
+    reserve_info = service.get_reserves_info(
+        lens_address=VENUS_BSC.get("lensAddress"),
+        comptroller_address=VENUS_BSC.get("comptrollerAddress"),
+        lens_abi=VENUS_LENS_ABI,
+        comptroller_abi=VENUS_COMPTROLLER_ABI
+    )
+    with open("venus_bsc.json", "w") as f:
+        f.write(json.dumps(reserve_info, indent=1))

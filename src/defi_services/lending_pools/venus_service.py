@@ -5,6 +5,8 @@ from defi_services.lending_pools.services.venus_state_service import VenusStateS
 
 
 class VenusService(DefiService):
+    name = "venus lending pool"
+
     def __init__(self, chain_id: str, provider_uri: str):
         super().__init__(chain_id, provider_uri)
         self.state_service = VenusStateService(provider_uri)
@@ -40,5 +42,6 @@ class VenusService(DefiService):
             wallet_address=wallet_address,
             lens_address=self.defi_constant.get("lensAddress"),
             reserves_info=self.defi_constant.get("reservesList"),
-            block_number=block_number
+            block_number=block_number,
+            wrapped_native_token=self.get_wrapped_native_token()
         )

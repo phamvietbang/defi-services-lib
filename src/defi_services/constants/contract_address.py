@@ -19,9 +19,11 @@ class ContractAddresses:
 
 
 class WrappedNativeTokens:
-    mapping = {
-        "0x38": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"
-    }
+    NATIVE_TOKEN = "0x0000000000000000000000000000000000000000"
+    WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"
+    WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    WMATIC = "0x0000000000000000000000000000000000001010"
+    WFANTOM = "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83"
 
 
 class AbnormalVenusPool:

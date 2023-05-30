@@ -3,7 +3,7 @@ import json
 from defi_services.lending_pools.trava_service import TravaService
 
 if __name__ == "__main__":
-    trava = TravaService("0x38","https://rpc.ankr.com/bsc")
+    trava = TravaService("0x38", "https://rpc.ankr.com/bsc")
     apy = trava.get_apy_defi_app()
     deposit_borrow = trava.get_wallet_deposit_borrow_balance(
         wallet_address="0x13c0c2F7Eb2799a515aae280832443365E54B511",

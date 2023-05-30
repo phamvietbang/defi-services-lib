@@ -3,6 +3,8 @@ from query_state_lib.client.client_querier import ClientQuerier
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from defi_services.abis.erc20_abi import ERC20_ABI
+from defi_services.constants.chain_constant import Chain
+from defi_services.constants.contract_address import WrappedNativeTokens
 from defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
 from defi_services.utils.graph_operations import BlockTimestampGraph, GraphOperations
 from defi_services.utils.market_service import MarketService

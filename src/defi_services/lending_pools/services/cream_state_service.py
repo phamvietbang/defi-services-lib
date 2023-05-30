@@ -4,7 +4,7 @@ from defi_services.abis.erc20_abi import ERC20_ABI
 from defi_services.abis.lending_pool.cream_comptroller_abi import CREAM_COMPTROLLER_ABI
 from defi_services.abis.lending_pool.cream_lens_abi import CREAM_LENS_ABI
 from defi_services.abis.lending_pool.ctoken_abi import CTOKEN_ABI
-from defi_services.constants.contract_address import ContractAddresses, AbnormalCreamPool
+from defi_services.constants.contract_address import ContractAddresses, AbnormalCreamPool, WrappedNativeTokens
 from defi_services.constants.db_constant import DBConst
 from defi_services.state_service import StateService
 from defi_services.utils.batch_queries_service import add_rpc_call, decode_data_response
@@ -37,6 +37,27 @@ class CreamStateService(StateService):
         for price_token in reserve_tokens_info:
             reserve_tokens_info[price_token[0].lower()] = price_token[1] * bnb_price
         return reserve_tokens_info
+
+    def get_reserves_info(
+            self,
+            comptroller_address: str,
+            comptroller_abi: list,
+            lens_address: str,
+            lens_abi: list,
+            block_number: int = "latest"):
+        ctokens = self.get_all_markets(comptroller_address, comptroller_abi, block_number)
+        metadata = self.ctoken_metadata_all(lens_address, lens_abi, ctokens, block_number)
+        reserves_info = {}
+        for data in metadata:
+            underlying = data[11].lower()
+            ctoken = data[0].lower()
+            lt = data[10] / 10 ** 18
+            reserves_info[underlying] = {
+                "cToken": ctoken,
+                "liquidationThreshold": lt
+            }
+
+        return reserves_info
 
     def get_all_markets(
             self, comptroller: str, comptroller_abi: list, block_number: int = 'latest'):
@@ -109,9 +130,14 @@ class CreamStateService(StateService):
             reserve_tokens_info.append(decoded_data.get(metadata_id))
             underlying_id = f"cTokenUnderlyingPrice_{lens_address}_{token_address}_{block_number}".lower()
             price_token = decoded_data.get(underlying_id)
+            underlying_decimals = decoded_data.get(metadata_id)[-1]
             underlying_prices[lower_address] = price_token[1] * wrapped_native_token_price
             if lower_address in AbnormalCreamPool.decimals.keys():
                 underlying_prices[lower_address] /= 10 ** AbnormalCreamPool.decimals.get(lower_address)
+            elif underlying_decimals == 8:
+                underlying_prices[lower_address] /= 10 ** 20
+            elif underlying_decimals == 6:
+                underlying_prices[lower_address] /= 10 ** 24
         return {
             "reserve_tokens_info": reserve_tokens_info,
             "ctoken_speeds": ctoken_speeds,
@@ -305,14 +331,15 @@ class CreamStateService(StateService):
             lens_abi: list = CREAM_LENS_ABI,
             block_number: int = "latest",
             wrapped_native_token_price: float = 310,
+            wrapped_native_token: str = None
     ):
         list_rpc_call = []
         list_call_id = []
         for token in reserves_info:
             underlying = token
             value = reserves_info[token]
-            if token == ContractAddresses.BNB:
-                underlying = ContractAddresses.WBNB
+            if token == WrappedNativeTokens.NATIVE_TOKEN:
+                underlying = wrapped_native_token
             add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=value["cToken"],
                          block_number=block_number,
                          list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="cTokenUnderlyingPrice")
@@ -336,8 +363,8 @@ class CreamStateService(StateService):
         for token in reserves_info:
             underlying = token
             value = reserves_info[token]
-            if token == ContractAddresses.BNB:
-                underlying = ContractAddresses.WBNB
+            if token == WrappedNativeTokens.NATIVE_TOKEN:
+                underlying = wrapped_native_token
             get_total_deposit_id = f"balanceOfUnderlying_{value['cToken']}_{wallet_address}_{block_number}".lower()
             get_total_borrow_id = f"borrowBalanceCurrent_{value['cToken']}_{wallet_address}_{block_number}".lower()
             get_decimals_id = f"decimals_{underlying}_{block_number}".lower()
@@ -364,3 +391,18 @@ class CreamStateService(StateService):
         else:
             result['health_factor'] = 100
         return result
+
+
+if __name__ == "__main__":
+    import json
+    from defi_services.lending_pools.lending_pools_info.bsc.cream_bsc import CREAM_BSC
+
+    service = CreamStateService(provider_uri="https://rpc.ankr.com/bsc")
+    reserve_info = service.get_reserves_info(
+        lens_address=CREAM_BSC.get("lensAddress"),
+        comptroller_address=CREAM_BSC.get("comptrollerAddress"),
+        lens_abi=CREAM_LENS_ABI,
+        comptroller_abi=CREAM_COMPTROLLER_ABI
+    )
+    with open("cream_bsc.json", "w") as f:
+        f.write(json.dumps(reserve_info, indent=1))
