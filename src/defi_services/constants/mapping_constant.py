@@ -13,5 +13,6 @@ LENDING_POOL_SERVICE = {
     "0xfa": [TravaService, GeistService, AaveV3Service],
     "0x1": [TravaService, AaveV2Service, CompoundService, AaveV3Service],
     "0x89": [AaveV2Service, AaveV3Service],
-    "0xa4b1": [AaveV3Service, RadiantService]
+    "0xa4b1": [AaveV3Service, RadiantService],
+    "0xa": [AaveV3Service]
 }
