@@ -1,5 +1,6 @@
 from defi_services.constants.chain_constant import Chain
 from defi_services.defi_service import DefiService
+from defi_services.lending_pools.lending_pools_info.arbitrum.radiant_arbitrum import RADIANT_ARB
 from defi_services.lending_pools.lending_pools_info.bsc.radiant_bsc import RADIANT_BSC
 from defi_services.lending_pools.services.radiant_state_service import RadiantStateService
 
@@ -16,6 +17,8 @@ class RadiantService(DefiService):
     def _get_constant(self):
         if self.chain_id == Chain.bsc:
             return RADIANT_BSC
+        if self.chain_id == Chain.arbitrum:
+            return RADIANT_ARB
         return None
 
     def get_apy_defi_app(self, block_number: int = "latest"):
