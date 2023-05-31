@@ -12,6 +12,7 @@ class CreamService(DefiService):
         super().__init__(chain_id, provider_uri)
         self.state_service = CreamStateService(provider_uri)
         self.defi_constant = self._get_constant()
+        self.address = self.defi_constant.get("comptrollerAddress")
 
     def _get_constant(self):
         if self.chain_id == Chain.bsc:

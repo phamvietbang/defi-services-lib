@@ -1,6 +1,6 @@
 TRAVA_ETH = {
     "address": "0xd61afaaa8a69ba541bc4db9c9b40d4142b43b9a4",
-    "stakedIncentiveAddress": "0x4c481E66798c6C82aF77d1e14d3233fE5D592A0b",
+    "stakedIncentiveAddress": "0x43cf9fb8cf26e46890d6e3a4e6494a843bbb6615",
     "oracleAddress": "0x2bd81260fe864173b6ec1ec9ee41a76366922565",
     "name": "Trava Lending Pool",
     "rewardToken": "0x044ede67afdb0f56d7451bb3aaccaeab3f772fad",

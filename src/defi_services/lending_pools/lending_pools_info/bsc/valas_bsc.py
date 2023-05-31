@@ -2,9 +2,9 @@ VALAS_BSC = {
     "address": "0xe29a55a6aeff5c8b1beede5bcf2f0cb3af8f91f5",
     "name": "Valas Lending Pool",
     "rewardToken": "0xb1ebdd56729940089ecc3ad0bbeeb12b6842ea6f",
-    "multiFeeAddress": "0x685D3b02b9b0F044A3C01Dbb95408FC2eB15a3b3",
+    "multiFeeAddress": "0x685d3b02b9b0f044a3c01dbb95408fc2eb15a3b3",
     "chefIncentiveAddress": '0xb7c1d99069a4eb582fc04e7e1124794000e7ecbf',
-    "oracleAddress": "0x3436c4B4A27B793539844090e271591cbCb0303c",
+    "oracleAddress": "0x3436c4b4a27b793539844090e271591cbcb0303c",
     "type": "LENDING_POOL",
     "reservesList": {
         "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c": {

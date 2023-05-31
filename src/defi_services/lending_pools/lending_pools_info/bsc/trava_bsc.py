@@ -1,6 +1,6 @@
 TRAVA_BSC = {
     "address": "0x75de5f7c91a89c16714017c7443eca20c7a8c295",
-    "stakedIncentiveAddress": "0x4c481E66798c6C82aF77d1e14d3233fE5D592A0b",
+    "stakedIncentiveAddress": "0x4c481e66798c6c82af77d1e14d3233fe5d592a0b",
     "oracleAddress": "0x7cd53b71bf56cc6c9c9b43719fe98e7c360c35df",
     "name": "Trava Lending Pool",
     "rewardToken": "0x170772a06affc0d375ce90ef59c8ec04c7ebf5d2",

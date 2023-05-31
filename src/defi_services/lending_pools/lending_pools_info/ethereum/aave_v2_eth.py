@@ -1,9 +1,9 @@
 AAVE_V2_ETH = {
-    "address": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+    "address": "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9",
     "name": "Aave V2 Lending Pool",
-    "rewardToken": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
-    "stakedIncentiveAddress": '0x83D055D382f25e6793099713505c68a5C7535a35',
-    "oracleAddress": "0xA50ba011c48153De246E5192C8f9258A2ba79Ca9",
+    "rewardToken": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+    "stakedIncentiveAddress": '0x83d055d382f25e6793099713505c68a5c7535a35',
+    "oracleAddress": "0xa50ba011c48153de246e5192c8f9258a2ba79ca9",
     "type": "LENDING_POOL",
     "reservesList": {
         "0xdac17f958d2ee523a2206206994597c13d831ec7": {

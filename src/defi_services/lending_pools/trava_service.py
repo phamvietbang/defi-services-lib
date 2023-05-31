@@ -8,10 +8,12 @@ from defi_services.lending_pools.services.trava_state_service import TravaStateS
 
 class TravaService(DefiService):
     name = "trava lending pool"
+
     def __init__(self, chain_id: str, provider_uri: str):
         super().__init__(chain_id, provider_uri)
         self.state_service = TravaStateService(provider_uri)
         self.defi_constant = self._get_constant()
+        self.address = self.defi_constant.get("address")
 
     def _get_constant(self):
         if self.chain_id == Chain.bsc:

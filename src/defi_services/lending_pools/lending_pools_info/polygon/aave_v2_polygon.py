@@ -1,9 +1,9 @@
 AAVE_V2_POLYGON = {
-    "address": "0x8dFf5E27EA6b7AC08EbFdf9eB090F32ee9a30fcf",
+    "address": "0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf",
     "name": "Aave V2 Lending Pool",
-    "rewardToken": "0xD6DF932A45C0f255f85145f286eA0b292B21C90B",
-    "stakedIncentiveAddress": '0x2C901a65071c077C78209b06AB2b5D8eC285aB84',
-    "oracleAddress": "0x0229F777B0fAb107F9591a41d5F02E4e98dB6f2d",
+    "rewardToken": "0xd6df932a45c0f255f85145f286ea0b292b21c90b",
+    "stakedIncentiveAddress": '0x2c901a65071c077c78209b06ab2b5d8ec285ab84',
+    "oracleAddress": "0x0229f777b0fab107f9591a41d5f02e4e98db6f2d",
     "type": "LENDING_POOL",
     "reservesList": {
         "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063": {
