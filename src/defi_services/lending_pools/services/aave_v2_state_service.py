@@ -12,6 +12,25 @@ class AaveV2StateService(TravaStateService):
     def __init__(self, provider_uri: str):
         super().__init__(provider_uri)
 
+    def get_asset_data_of_token_list(self, stake_incentive_address: str, token_addresses: list,
+                                     stake_incentive_abi: list = STAKED_INCENTIVES_ABI, block_number: int = 'latest'):
+        list_rpc_call, list_call_id = [], []
+        for token_address in token_addresses:
+            add_rpc_call(
+                abi=stake_incentive_abi, fn_name='assets', contract_address=stake_incentive_address,
+                block_number=block_number, fn_paras=token_address, list_rpc_call=list_rpc_call,
+                list_call_id=list_call_id
+
+            )
+        data_response = self.client_querier.sent_batch_to_provider(list_rpc_call, batch_size=100)
+        decoded_data = decode_data_response(data_response, list_call_id)
+        result = {}
+        for token_address in token_addresses:
+            get_reserve_data_call_id = f'assets_{stake_incentive_address}_{token_address}_{block_number}'.lower()
+            result[token_address.lower()] = decoded_data.get(get_reserve_data_call_id)
+
+        return result
+
     def _decode_apy_lending_pool_function_call(
             self,
             list_rpc_call: list,
@@ -34,8 +53,10 @@ class AaveV2StateService(TravaStateService):
         for token_address in reserves_list:
             lower_address = token_address.lower()
             reserve_data = reserves_data[lower_address]
-            interest_rate[lower_address] = {DBConst.deposit_apy: float(reserve_data[3]) / 10 ** 27,
-                                            DBConst.borrow_apy: float(reserve_data[4]) / 10 ** 27}
+            interest_rate[lower_address] = {
+                DBConst.deposit_apy: float(reserve_data[3]) / 10 ** 27,
+                DBConst.borrow_apy: float(reserve_data[4]) / 10 ** 27,
+                DBConst.stable_borrow_apy: float(reserve_data[5]) / 10 ** 27}
             ttoken = reserve_data[7].lower()
             sdebt_token = reserve_data[8].lower()
             debt_token = reserve_data[9].lower()
@@ -135,20 +156,24 @@ class AaveV2StateService(TravaStateService):
             asset_data_t = asset_data_tokens.get(ttoken)
             asset_data_d = asset_data_tokens.get(debt_token)
             # update deposit, borrow apy
-            total_supply_t = total_supply_t * wrapped_native_token_price / 10 ** decimal
-            total_supply_d = total_supply_d * wrapped_native_token_price / 10 ** decimal
-            eps_t = asset_data_t[1] / 10 ** 18
-            eps_d = asset_data_d[1] / 10 ** 18
+            total_supply_t = total_supply_t / 10 ** decimal
+            total_supply_d = total_supply_d / 10 ** decimal
+            eps_t = asset_data_t[0] / 10 ** 18
+            eps_d = asset_data_d[0] / 10 ** 18
             token_price = token_prices.get(token_address)
             if total_supply_t:
+                total_supply_t_in_usd = total_supply_t * token_price * wrapped_native_token_price
                 deposit_apr = eps_t * TimeConstants.A_YEAR * pool_token_price / (
-                    total_supply_t * token_price)
+                    total_supply_t_in_usd)
             else:
+                total_supply_t_in_usd = 0
                 deposit_apr = 0
             if total_supply_d:
+                total_supply_d_in_usd = total_supply_d * token_price * wrapped_native_token_price
                 borrow_apr = eps_d * TimeConstants.A_YEAR * pool_token_price / (
-                    total_supply_d * token_price)
+                        total_supply_d_in_usd)
             else:
+                total_supply_d_in_usd = 0
                 borrow_apr = 0
             interest_rate[token_address].update({
                 "utilization": total_supply_d / total_supply_t,
@@ -158,10 +183,10 @@ class AaveV2StateService(TravaStateService):
             liquidity_log = {
                 DBConst.total_borrow: {
                     DBConst.amount: total_supply_d,
-                    DBConst.value_in_usd: total_supply_d * token_price},
+                    DBConst.value_in_usd: total_supply_d_in_usd},
                 DBConst.total_deposit: {
                     DBConst.amount: total_supply_t,
-                    DBConst.value_in_usd: total_supply_t * token_price}
+                    DBConst.value_in_usd: total_supply_t_in_usd}
             }
             interest_rate[token_address].update({DBConst.liquidity_change_logs: liquidity_log})
 

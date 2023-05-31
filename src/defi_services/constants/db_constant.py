@@ -38,6 +38,7 @@ class DBConst:
     created_at = "createdAt"
     deposit_apy = "depositAPY"
     borrow_apy = "borrowAPY"
+    stable_borrow_apy = "stableBorrowAPY"
     t_token = "tToken"
     d_token = "dToken"
     ltv = "ltv"

@@ -31,13 +31,16 @@ class CompoundService(DefiService):
         )
 
     def get_rewards_balance(self, wallet_address: str, block_number: int = "latest"):
-        return self.state_service.get_rewards_balance(
-            wallet_address=wallet_address,
-            comptroller_address=self.defi_constant.get("comptrollerAddress"),
-            lens_address=self.defi_constant.get("lensAddress"),
-            pool_token=self.defi_constant.get("rewardToken"),
-            block_number=block_number
-        )
+        reward = self.state_service.get_rewards_balance(
+                wallet_address=wallet_address,
+                comptroller_address=self.defi_constant.get("comptrollerAddress"),
+                lens_address=self.defi_constant.get("lensAddress"),
+                pool_token=self.defi_constant.get("rewardToken"),
+                block_number=block_number
+            )
+        return {
+            self.defi_constant.get("rewardToken"): reward
+        }
 
     def get_wallet_deposit_borrow_balance(self, wallet_address: str, block_number: int = "latest", **kwargs):
         return self.state_service.get_wallet_deposit_borrow_balance(

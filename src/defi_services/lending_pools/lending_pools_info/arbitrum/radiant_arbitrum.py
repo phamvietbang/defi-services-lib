@@ -1,10 +1,10 @@
 RADIANT_ARB = {
-    "address": "0xF4B1486DD74D07706052A33d31d7c0AAFD0659E1",
+    "address": "0xf4b1486dd74d07706052a33d31d7c0aafd0659e1",
     "name": "Radiant Lending Pool",
-    "rewardToken": "0x3082CC23568eA640225c2467653dB90e9250AaA0",
-    "multiFeeAddress": "0x76ba3eC5f5adBf1C58c91e86502232317EeA72dE",
-    "chefIncentiveAddress": '0xebC85d44cefb1293707b11f707bd3CEc34B4D5fA',
-    "oracleAddress": "0xC0cE5De939aaD880b0bdDcf9aB5750a53EDa454b",
+    "rewardToken": "0x3082cc23568ea640225c2467653db90e9250aaa0",
+    "multiFeeAddress": "0x76ba3ec5f5adbf1c58c91e86502232317eea72de",
+    "chefIncentiveAddress": '0xebc85d44cefb1293707b11f707bd3cec34b4d5fa',
+    "oracleAddress": "0xc0ce5de939aad880b0bddcf9ab5750a53eda454b",
     "type": "LENDING_POOL",
     "reservesList": {
         "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f": {

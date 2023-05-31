@@ -112,8 +112,10 @@ class ValasStateService(TravaStateService):
         for token_address in reserves_list:
             lower_address = token_address.lower()
             reserve_data = reserves_data[lower_address]
-            interest_rate[lower_address] = {DBConst.deposit_apy: float(reserve_data[3]) / 10 ** 27,
-                                            DBConst.borrow_apy: float(reserve_data[4]) / 10 ** 27}
+            interest_rate[lower_address] = {
+                DBConst.deposit_apy: float(reserve_data[3]) / 10 ** 27,
+                DBConst.borrow_apy: float(reserve_data[4]) / 10 ** 27,
+                DBConst.stable_borrow_apy: float(reserve_data[5]) / 10 ** 27}
             ttoken = reserve_data[7].lower()
             debt_token = reserve_data[9].lower()
             ttokens[lower_address] = ttoken
@@ -170,7 +172,7 @@ class ValasStateService(TravaStateService):
         debt_and_t_tokens = list(debt_tokens.values()) + list(ttokens.values())
         total_supply_tokens = self.total_supply_of_token_list(debt_and_t_tokens)
         asset_data_tokens = self.pool_info_of_token_list(
-                chef_incentive_address, debt_and_t_tokens, chef_incentive_abi, block_number)
+            chef_incentive_address, debt_and_t_tokens, chef_incentive_abi, block_number)
         # Decode data
         lower_addresses = [i.lower() for i in reserves_list]
         for token_address in lower_addresses:

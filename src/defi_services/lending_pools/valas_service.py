@@ -27,13 +27,16 @@ class ValasService(DefiService):
         )
 
     def get_rewards_balance(self, wallet_address: str, block_number: int = "latest"):
-        return self.state_service.get_rewards_balance(
+        reward = self.state_service.get_rewards_balance(
             wallet_address=wallet_address,
             pool_address=self.defi_constant.get("address"),
             multi_fee_address=self.defi_constant.get("multiFeeAddress"),
             block_number=block_number,
             reserves_info=self.defi_constant.get("reservesList")
         )
+        return {
+            self.defi_constant.get("rewardToken"): reward
+        }
 
     def get_wallet_deposit_borrow_balance(self, wallet_address: str, block_number: int = "latest"):
         return self.state_service.get_wallet_deposit_borrow_balance(
