@@ -84,12 +84,22 @@ if __name__ == "__main__":
     import json
     from defi_services.lending_pools.lending_pools_info.ethereum.compound_eth import COMPOUND_ETH
 
+    # service = CompoundStateService(provider_uri="https://rpc.ankr.com/eth")
+    # reserve_info = service.get_reserves_info(
+    #     lens_address=COMPOUND_ETH.get("lensAddress"),
+    #     comptroller_address=COMPOUND_ETH.get("comptrollerAddress"),
+    #     lens_abi=CREAM_LENS_ABI,
+    #     comptroller_abi=CREAM_COMPTROLLER_ABI
+    # )
+    # with open("compound_bsc.json", "w") as f:
+    #     f.write(json.dumps(reserve_info, indent=1))
     service = CompoundStateService(provider_uri="https://rpc.ankr.com/eth")
-    reserve_info = service.get_reserves_info(
+    reserve_info = service.get_token_deposit_borrow_balance(
         lens_address=COMPOUND_ETH.get("lensAddress"),
-        comptroller_address=COMPOUND_ETH.get("comptrollerAddress"),
+        reserves_info=COMPOUND_ETH.get("reservesList"),
         lens_abi=CREAM_LENS_ABI,
-        comptroller_abi=CREAM_COMPTROLLER_ABI
+        wrapped_native_token_price=0,
+        wrapped_native_token="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     )
-    with open("compound_bsc.json", "w") as f:
+    with open("../../../../test/compound_bsc.json", "w") as f:
         f.write(json.dumps(reserve_info, indent=1))

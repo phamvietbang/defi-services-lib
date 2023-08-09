@@ -281,17 +281,102 @@ class VenusStateService(CreamStateService):
             result['health_factor'] = 100
         return result
 
+    def get_token_deposit_borrow_balance(
+            self,
+            lens_address: str,
+            reserves_info: dict,
+            lens_abi: list = VENUS_LENS_ABI,
+            block_number: int = "latest",
+            wrapped_native_token_price: float = 310,
+            wrapped_native_token: str = None
+    ):
+        list_rpc_call = []
+        list_call_id = []
+        for token in reserves_info:
+            underlying = token
+            value = reserves_info[token]
+            if token == WrappedNativeTokens.NATIVE_TOKEN:
+                underlying = wrapped_native_token
+            add_rpc_call(abi=lens_abi, contract_address=lens_address, fn_paras=value["cToken"],
+                         block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call, fn_name="vTokenUnderlyingPrice")
+            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="totalBorrows",
+                         block_number=block_number, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="totalSupply",
+                         block_number=block_number, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=CTOKEN_ABI, contract_address=value["cToken"], fn_name="exchangeRateCurrent",
+                         block_number=block_number, list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=ERC20_ABI, contract_address=underlying, fn_name="decimals", block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=ERC20_ABI, contract_address=value["cToken"], fn_name="decimals", block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+            add_rpc_call(abi=ERC20_ABI, contract_address=underlying, fn_name="symbol", block_number=block_number,
+                         list_call_id=list_call_id, list_rpc_call=list_rpc_call)
+
+        data_response = self.client_querier.sent_batch_to_provider(list_rpc_call, batch_size=100)
+        decoded_data = decode_data_response(data_response, list_call_id)
+        result = {
+            "borrow_amount_in_usd": 0,
+            "deposit_amount_in_usd": 0,
+            "health_factor": 0,
+            'reserves_data': {}
+        }
+        for token in reserves_info:
+            underlying = token
+            value = reserves_info[token]
+            if token == WrappedNativeTokens.NATIVE_TOKEN:
+                underlying = wrapped_native_token
+            get_total_deposit_id = f"totalSupply_{value['cToken']}_{block_number}".lower()
+            get_total_borrow_id = f"totalBorrows_{value['cToken']}_{block_number}".lower()
+            get_decimals_id = f"decimals_{underlying}_{block_number}".lower()
+            get_exchange_rate = f"exchangeRateCurrent_{value['cToken']}_{block_number}".lower()
+            get_symbol_id = f"symbol_{underlying}_{block_number}".lower()
+            get_ctoken_decimals = f"decimals_{value['cToken']}_{block_number}".lower()
+            symbol = decoded_data[get_symbol_id]
+            decimals = decoded_data[get_decimals_id]
+            ctoken_decimals = decoded_data[get_ctoken_decimals]
+            exchange_rate = decoded_data[get_exchange_rate] / 10 ** (18 - 8 + decimals)
+            deposit_amount = decoded_data[get_total_deposit_id] * exchange_rate / 10 ** ctoken_decimals
+            borrow_amount = decoded_data[get_total_borrow_id] / 10 ** decimals
+            get_underlying_token_price = f"vTokenUnderlyingPrice_{lens_address}_{value['cToken']}_{block_number}".lower()
+            token_price = decoded_data.get(get_underlying_token_price)[1] / 10 ** (36 - decimals)
+
+            deposit_amount_in_usd = deposit_amount * token_price
+            borrow_amount_in_usd = borrow_amount * token_price
+            result['borrow_amount_in_usd'] += borrow_amount_in_usd
+            result['deposit_amount_in_usd'] += deposit_amount_in_usd
+            if (borrow_amount > 0) or (deposit_amount > 0):
+                result['reserves_data'][token] = {
+                    "symbol": symbol,
+                    "borrow_amount": borrow_amount,
+                    "borrow_amount_in_usd": borrow_amount_in_usd,
+                    "deposit_amount": deposit_amount,
+                    "deposit_amount_in_usd": deposit_amount_in_usd,
+                }
+
+        return result
+
 
 if __name__ == "__main__":
     import json
     from defi_services.lending_pools.lending_pools_info.bsc.venus_bsc import VENUS_BSC
 
+    # service = VenusStateService(provider_uri="https://rpc.ankr.com/bsc")
+    # reserve_info = service.get_reserves_info(
+    #     lens_address=VENUS_BSC.get("lensAddress"),
+    #     comptroller_address=VENUS_BSC.get("comptrollerAddress"),
+    #     lens_abi=VENUS_LENS_ABI,
+    #     comptroller_abi=VENUS_COMPTROLLER_ABI
+    # )
+    # with open("venus_bsc.json", "w") as f:
+    #     f.write(json.dumps(reserve_info, indent=1))
     service = VenusStateService(provider_uri="https://rpc.ankr.com/bsc")
-    reserve_info = service.get_reserves_info(
+    reserve_info = service.get_token_deposit_borrow_balance(
         lens_address=VENUS_BSC.get("lensAddress"),
-        comptroller_address=VENUS_BSC.get("comptrollerAddress"),
+        reserves_info=VENUS_BSC.get("reservesList"),
         lens_abi=VENUS_LENS_ABI,
-        comptroller_abi=VENUS_COMPTROLLER_ABI
+        wrapped_native_token_price=0,
+        wrapped_native_token="0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
     )
-    with open("venus_bsc.json", "w") as f:
+    with open("../../../../test/venus_bsc.json", "w") as f:
         f.write(json.dumps(reserve_info, indent=1))
